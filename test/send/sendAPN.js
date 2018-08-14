@@ -6,7 +6,7 @@ import sinonChai from 'sinon-chai';
 import dirtyChai from 'dirty-chai';
 import { readFileSync } from 'fs';
 
-import apn from 'apn';
+import { Provider, Notification } from 'node-apn-http2';
 import PN from '../../src';
 import APN from '../../src/sendAPN';
 import { sendOkMethodGCM, testPushSuccess, testPushError, testPushException } from '../util';
@@ -49,7 +49,7 @@ let sendMethod;
 
 function sendOkMethod() {
     // Don't use arrow function because we use this!!
-    return sinon.stub(apn.Provider.prototype, 'send', function sendAPN(message, _regIds) {
+    return sinon.stub(Provider.prototype, 'send', function sendAPN(message, _regIds) {
         // TODO: validate other props? What about token?
         expect(this.client.config).to.be.an('object').includes.keys(['cert', 'key']);
         expect(this.client.config.cert).to.eql(readFileSync(apnOptions.cert));
@@ -57,7 +57,7 @@ function sendOkMethod() {
 
         expect(_regIds).to.be.instanceOf(Array);
         _regIds.forEach(regId => expect(regIds).to.include(regId));
-        expect(message).to.be.instanceOf(apn.Notification);
+        expect(message).to.be.instanceOf(Notification);
         expect(message.aps.sound).to.eql(data.sound);
         expect(message.aps.alert.title).to.eql(data.title);
         expect(message.aps.alert.body).to.equal(data.body);
@@ -70,7 +70,7 @@ function sendOkMethod() {
 }
 
 function sendFailureMethod1() {
-    return sinon.stub(apn.Provider.prototype, 'send', (message, _regIds) => Promise.resolve({
+    return sinon.stub(Provider.prototype, 'send', (message, _regIds) => Promise.resolve({
         failed: _regIds.map(regId => ({
             device: regId,
             response: {},
@@ -79,7 +79,7 @@ function sendFailureMethod1() {
     }));
 }
 function sendFailureMethod2() {
-    return sinon.stub(apn.Provider.prototype, 'send', (message, _regIds) => Promise.resolve({
+    return sinon.stub(Provider.prototype, 'send', (message, _regIds) => Promise.resolve({
         failed: _regIds.map(regId => ({
             device: regId,
             response: {
@@ -90,7 +90,7 @@ function sendFailureMethod2() {
 }
 
 function sendErrorMethod() {
-    return sinon.stub(apn.Provider.prototype, 'send', (message, _regIds) => Promise.resolve({
+    return sinon.stub(Provider.prototype, 'send', (message, _regIds) => Promise.resolve({
         failed: _regIds.map(regId => ({
             device: regId,
             error: fErr,
@@ -99,7 +99,7 @@ function sendErrorMethod() {
 }
 
 function sendThrowExceptionMethod() {
-    return sinon.stub(apn.Provider.prototype, 'send', () => Promise.reject(fErr));
+    return sinon.stub(Provider.prototype, 'send', () => Promise.reject(fErr));
 }
 
 describe('push-notifications-apn', () => {
@@ -125,10 +125,10 @@ describe('push-notifications-apn', () => {
 
     describe('send push notifications successfully (no payload)', () => {
         before(() => {
-            sendMethod = sinon.stub(apn.Provider.prototype, 'send', (message, _regIds) => {
+            sendMethod = sinon.stub(Provider.prototype, 'send', (message, _regIds) => {
                 expect(_regIds).to.be.instanceOf(Array);
                 _regIds.forEach(regId => expect(regIds).to.include(regId));
-                expect(message).to.be.instanceOf(apn.Notification);
+                expect(message).to.be.instanceOf(Notification);
                 expect(message.aps.alert.title).to.eql(data.title);
                 expect(message.aps.alert.body).to.eql(data.body);
                 expect(message.payload).to.eql({});
@@ -152,10 +152,10 @@ describe('push-notifications-apn', () => {
 
     describe('send silent push notifications', () => {
         before(() => {
-            sendMethod = sinon.stub(apn.Provider.prototype, 'send', (message, _regIds) => {
+            sendMethod = sinon.stub(Provider.prototype, 'send', (message, _regIds) => {
                 expect(_regIds).to.be.instanceOf(Array);
                 _regIds.forEach(regId => expect(regIds).to.include(regId));
-                expect(message).to.be.instanceOf(apn.Notification);
+                expect(message).to.be.instanceOf(Notification);
                 expect(message.aps.sound).to.be.undefined();
                 expect(message.aps.alert.title).to.be.undefined();
                 expect(message.aps.alert.body).to.be.undefined();
@@ -189,10 +189,10 @@ describe('push-notifications-apn', () => {
 
     describe('send push notifications with normal priority', () => {
         before(() => {
-            sendMethod = sinon.stub(apn.Provider.prototype, 'send', (message, _regIds) => {
+            sendMethod = sinon.stub(Provider.prototype, 'send', (message, _regIds) => {
                 expect(_regIds).to.be.instanceOf(Array);
                 _regIds.forEach(regId => expect(regIds).to.include(regId));
-                expect(message).to.be.instanceOf(apn.Notification);
+                expect(message).to.be.instanceOf(Notification);
                 expect(message).to.have.deep.property('priority', 5);
                 return Promise.resolve({
                     sent: _regIds,
@@ -293,7 +293,7 @@ describe('push-notifications-apn', () => {
     });
 
     describe('shutdown', () => {
-        const connectionStub = sinon.stub(apn.Provider.prototype, 'shutdown');
+        const connectionStub = sinon.stub(Provider.prototype, 'shutdown');
         const apnInstance = new APN(apnOptions);
 
         before(() => {
